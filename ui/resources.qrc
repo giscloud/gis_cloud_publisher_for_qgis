@@ -1,0 +1,10 @@
+<RCC>
+    <qresource prefix="/plugins/gis_cloud_publisher/ui">
+        <file>img/facebook.png</file>
+        <file>img/google.png</file>
+        <file>img/arrow-left.png</file>
+        <file>img/loader.gif</file>
+        <file>img/icon.png</file>
+        <file>img/eye.png</file>
+    </qresource>
+</RCC>
