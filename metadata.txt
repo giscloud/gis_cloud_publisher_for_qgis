@@ -14,4 +14,6 @@ category=Web
 icon=ui/img/icon.png
 experimental=False
 deprecated=False
-
+changelog=
+    1.0.1
+    - fixed handling layers without geometry
