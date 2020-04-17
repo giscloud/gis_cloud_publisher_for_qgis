@@ -181,6 +181,8 @@ class GISCloudQgisCore(object):
                 try:
                     layer_object.type = \
                         GISCloudQgisUtils.get_layer_geometry(layer)
+                    if layer_object.type[0] is None:
+                        continue
                 except Exception:
                     LOGGER.error('Couldn\'t fetch geometry of the layer',
                                  exc_info=True)
