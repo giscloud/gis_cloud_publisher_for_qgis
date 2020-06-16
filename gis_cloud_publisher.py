@@ -114,6 +114,13 @@ class GISCloudPublisher(QObject):
                                                padding:0px 8px 0px 8px;\
                                                color:#222222}'
 
+        self.layer_hooks = ["styleChanged", "blendModeChanged",
+                            "configChanged", "crsChanged",
+                            "legendChanged", "metadataChanged",
+                            "nameChanged", "statusChanged",
+                            "rendererChanged", "repaintRequested",
+                            "flagsChanged", "dataSourceChanged"]
+
     def initGui(self):
         """initialize the gui"""
         # pylint: disable=C0103
@@ -433,14 +440,10 @@ class GISCloudPublisher(QObject):
             if not ISQGIS3:
                 continue
 
-            layer.dataSourceChanged.connect(event_handler.handle_data_change)
-            for signal in (layer.styleChanged, layer.blendModeChanged,
-                           layer.configChanged, layer.crsChanged,
-                           layer.legendChanged, layer.metadataChanged,
-                           layer.nameChanged, layer.statusChanged,
-                           layer.rendererChanged, layer.repaintRequested,
-                           layer.flagsChanged):
-                signal.connect(self.handle_project_update)
+            for hook in self.layer_hooks:
+                if hasattr(layer, hook):
+                    signal = getattr(layer, hook)
+                    signal.connect(self.handle_project_update)
 
     def __unhook_on_layer_events(self, layers):
         for layer in layers:
@@ -459,15 +462,10 @@ class GISCloudPublisher(QObject):
             if not ISQGIS3:
                 continue
 
-            layer.dataSourceChanged.disconnect(
-                event_handler.handle_data_change)
-            for signal in (layer.styleChanged, layer.blendModeChanged,
-                           layer.configChanged, layer.crsChanged,
-                           layer.legendChanged, layer.metadataChanged,
-                           layer.nameChanged, layer.statusChanged,
-                           layer.rendererChanged, layer.repaintRequested,
-                           layer.flagsChanged):
-                signal.disconnect(self.handle_project_update)
+            for hook in self.layer_hooks:
+                if hasattr(layer, hook):
+                    signal = getattr(layer, hook)
+                    signal.disconnect(self.handle_project_update)
 
     def __unhook_all_events(self, unhook_layer_events=True):
         if unhook_layer_events or ISQGIS3:
