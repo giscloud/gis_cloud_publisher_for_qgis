@@ -66,6 +66,7 @@ class GISCloudQgisCore(object):
     def __init__(self, path):
         """Initialize layers, map_name, supported datasources."""
         self.tmp_dir = path + '/tmp'
+        self.tmp_dir_len = len(self.tmp_dir)
         self.gc_api = None
         self.tree_order = {}
         self.map_name = None
@@ -287,7 +288,7 @@ class GISCloudQgisCore(object):
                 self.tmp_dir,
                 layer.id())
 
-        GISCloudQgisUtils.find_layer_source(layer, layer_object, source)
+        GISCloudQgisUtils.find_layer_source(layer, layer_object, source, self.tmp_dir_len)
         layer_object.source = {"type": "file",
                                "src": '/qgis/map{}/{}'.format(
                                    self.gc_api.map.map_id,
@@ -369,7 +370,7 @@ class GISCloudQgisCore(object):
 
         ext = layer.extent()
 
-        GISCloudQgisUtils.get_layer_id(layer, layer_object)
+        GISCloudQgisUtils.get_layer_id(layer, layer_object, self.tmp_dir_len)
         layer_object.source = source
         map_style = GISCloudLayerStyle(layer, layer_object, self.gc_api)
         layer_object.styles = map_style.get_style()

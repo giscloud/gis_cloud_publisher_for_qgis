@@ -30,6 +30,7 @@
 
 """
 
+import hashlib
 import json
 import os
 from os.path import basename
@@ -110,7 +111,7 @@ class GISCloudQgisUtils(object):
                         [source_dir + '/' + _file, gc_file])
 
     @staticmethod
-    def find_layer_source(layer, layer_object, source):
+    def find_layer_source(layer, layer_object, source, tmp_dir_len):
         """Pasing layer source and sanitizing file name."""
         source_dir = source.split('/')
         source_dir.pop()
@@ -118,7 +119,7 @@ class GISCloudQgisUtils(object):
         LOGGER.debug('Source dir is {}'.format(source_dir))
 
         source_no_ext = source.split("/")[-1].rsplit('.', 1)[0].lower()
-        GISCloudQgisUtils.get_layer_id(layer, layer_object)
+        GISCloudQgisUtils.get_layer_id(layer, layer_object, tmp_dir_len)
         layer_object.source = source
         layer_object.gc_source = re.sub(source_no_ext,
                                         layer_object.id,
@@ -128,13 +129,28 @@ class GISCloudQgisUtils(object):
         layer_object.source_no_ext = source_no_ext
 
     @staticmethod
-    def get_layer_id(layer, layer_object):
+    def get_layer_id(layer, layer_object, tmp_dir_len):
         """get layer id from qgis id"""
         layer_object.id = re.sub(r'[^a-zA-Z0-9\-_\. ]',
                                  '_',
                                  layer.id().encode('ascii',
                                                    errors='backslashreplace')
                                  .decode())
+
+        # some OSes, e.g. Windows have full path name limited to 260 chars
+        # so we need to make sure we're below that threshold
+        # our filename can be appended with md5 suffix of 32 + 1 chars + extensions
+        # which in total can around 240-250 chars, so we layer id to 210
+        layer_id_len = len(layer_object.id)
+        if layer_id_len + tmp_dir_len > 210:
+            layer_id_substring_len = 210 - tmp_dir_len - 1 - 32
+            md5 = hashlib.md5()
+            md5.update(layer_object.id.encode("utf-8"))
+            md5 = md5.hexdigest()
+            if layer_id_substring_len > 0:
+                layer_object.id = layer_object.id[:layer_id_substring_len] + "_" + md5
+            else:
+                layer_object.id = md5
 
     @staticmethod
     def get_layer_geometry(layer):
