@@ -119,7 +119,7 @@ class GISCloudPublisher(QObject):
                             "legendChanged", "metadataChanged",
                             "nameChanged", "statusChanged",
                             "rendererChanged", "repaintRequested",
-                            "flagsChanged", "dataSourceChanged"]
+                            "flagsChanged"]
 
     def initGui(self):
         """initialize the gui"""
@@ -440,6 +440,9 @@ class GISCloudPublisher(QObject):
             if not ISQGIS3:
                 continue
 
+            if hasattr(layer, "dataSourceChanged"):
+                layer.dataSourceChanged.connect(event_handler.handle_data_change)
+
             for hook in self.layer_hooks:
                 if hasattr(layer, hook):
                     signal = getattr(layer, hook)
@@ -461,6 +464,9 @@ class GISCloudPublisher(QObject):
 
             if not ISQGIS3:
                 continue
+
+            if hasattr(layer, "dataSourceChanged"):
+                layer.dataSourceChanged.disconnect(event_handler.handle_data_change)
 
             for hook in self.layer_hooks:
                 if hasattr(layer, hook):
