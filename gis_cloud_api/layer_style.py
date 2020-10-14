@@ -208,7 +208,8 @@ class GISCloudLayerStyle(object):
                             style['borderwidth'] = temp_style[u'outline_width']
                         if u'color' in temp_style and \
                            "style" in temp_style and \
-                           temp_style["style"] == "solid":
+                           temp_style["style"] == "solid" and \
+                           temp_style[u'color'].split(',')[3:4][0] != '0':
                             style['color'] = ','.join(
                                 temp_style[u'color']
                                 .split(',')[0:3])
