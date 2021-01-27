@@ -170,7 +170,7 @@ class GISCloudQgisCore(object):
                         self.layers_to_update[layer.id()]
 
                 layer_object.order = order
-                layer_object.name = str(layer.name())
+                layer_object.name = layer.name().encode('utf-8').decode('utf-8')
                 layer_object.mid = \
                     int(self.gc_api.map.map_id) if self.gc_api.map.map_id \
                     else None
@@ -281,16 +281,16 @@ class GISCloudQgisCore(object):
                 (not os.path.isfile(source) or
                  not source.split('.')[-1].lower() in
                  self.supported_file_source_vector)):
-            source = '{0}/{1}.{2}'.format(self.tmp_dir,
-                                          layer.id(),
-                                          'sqlite')
-            layer_object.source_to_convert = r'{0}/{1}'.format(
+            source = u'{0}/{1}.{2}'.format(self.tmp_dir,
+                                           layer.id(),
+                                           'sqlite')
+            layer_object.source_to_convert = u'{0}/{1}'.format(
                 self.tmp_dir,
                 layer.id())
 
         GISCloudQgisUtils.find_layer_source(layer, layer_object, source, self.tmp_dir_len)
         layer_object.source = {"type": "file",
-                               "src": '/qgis/map{}/{}'.format(
+                               "src": u'/qgis/map{}/{}'.format(
                                    self.gc_api.map.map_id,
                                    layer_object.gc_source)}
 
