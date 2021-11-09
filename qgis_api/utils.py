@@ -71,7 +71,7 @@ class GISCloudQgisUtils(object):
 
         source_dir = layer_object.source_dir
         source_no_ext = layer_object.source_no_ext
-        source_no_ext_enum = enumerate(source_no_ext.split('.'))
+        source_no_ext_array = source_no_ext.split('.')
 
         if layer_object.source_to_convert:
             layer = layer_object.qgis_layer
@@ -101,7 +101,7 @@ class GISCloudQgisUtils(object):
             filename = _file.lower().split('.')
             filename_len = len(filename)
             matched_file = True
-            for i, item in source_no_ext_enum:
+            for i, item in enumerate(source_no_ext_array):
                 if i >= filename_len or filename[i] != item:
                     matched_file = False
                     break
