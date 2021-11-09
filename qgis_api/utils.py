@@ -71,6 +71,7 @@ class GISCloudQgisUtils(object):
 
         source_dir = layer_object.source_dir
         source_no_ext = layer_object.source_no_ext
+        source_no_ext_enum = enumerate(source_no_ext.split('.'))
 
         if layer_object.source_to_convert:
             layer = layer_object.qgis_layer
@@ -97,9 +98,15 @@ class GISCloudQgisUtils(object):
                         'SQLite')
         files = os.listdir(source_dir)
         for _file in files:
-            filename = _file.rsplit('.', 1)
-            if filename[0].lower() == source_no_ext and \
-               (not filename[1] or filename[1].lower() != "zip"):
+            filename = _file.lower().split('.')
+            filename_len = len(filename)
+            matched_file = True
+            for i, item in source_no_ext_enum:
+                if i >= filename_len or filename[i] != item:
+                    matched_file = False
+                    break
+            if matched_file and \
+               (filename_len == 1 or filename[-1] != "zip"):
                 gc_file = re.sub(source_no_ext,
                                  layer_object.id,
                                  _file,
