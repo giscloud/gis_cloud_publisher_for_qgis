@@ -16,6 +16,8 @@ icon=ui/img/icon.png
 experimental=False
 deprecated=False
 changelog=
+    1.0.7
+    - fix including layer source files that have multiple extensions
     1.0.6
     - fix encoding for layer names
     - handle layer transparency when alpha is equal to zero for polygon features
