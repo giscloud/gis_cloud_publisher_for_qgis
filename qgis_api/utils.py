@@ -71,7 +71,6 @@ class GISCloudQgisUtils(object):
 
         source_dir = layer_object.source_dir
         source_no_ext = layer_object.source_no_ext
-        current_files = gc_api.current_gc_files
 
         if layer_object.source_to_convert:
             layer = layer_object.qgis_layer
@@ -79,7 +78,7 @@ class GISCloudQgisUtils(object):
                              layer_object.id,
                              layer.id() + ".sqlite",
                              flags=re.I)
-            if layer_object.should_updata_data or gc_file not in current_files:
+            if layer_object.should_updata_data or gc_file not in gc_api.current_gc_files:
                 gc_api.files_to_delete_after_upload.append(
                     layer_object.source_to_convert + ".sqlite")
                 if ISQGIS3:
@@ -106,7 +105,7 @@ class GISCloudQgisUtils(object):
                                  _file,
                                  flags=re.I)
                 if layer_object.should_updata_data or \
-                   gc_file not in current_files:
+                   gc_file not in gc_api.current_gc_files:
                     layer_object.files.append(
                         [source_dir + '/' + _file, gc_file])
 
