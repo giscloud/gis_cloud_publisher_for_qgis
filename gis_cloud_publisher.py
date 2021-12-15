@@ -432,8 +432,9 @@ class GISCloudPublisher(QObject):
             layer.giscloud_event_handler = event_handler
 
             layer.dataChanged.connect(event_handler.handle_data_change)
-            layer.dataProvider().dataChanged.connect(
-                event_handler.handle_data_change)
+            if hasattr(layer, "dataProvider"):
+                layer.dataProvider().dataChanged.connect(
+                    event_handler.handle_data_change)
             if GISCloudQgisUtils.is_vector_layer(layer):
                 layer.editingStopped.connect(event_handler.handle_data_change)
 
@@ -456,8 +457,9 @@ class GISCloudPublisher(QObject):
             event_handler = layer.giscloud_event_handler
 
             layer.dataChanged.disconnect(event_handler.handle_data_change)
-            layer.dataProvider().dataChanged.disconnect(
-                event_handler.handle_data_change)
+            if hasattr(layer, "dataProvider"):
+                layer.dataProvider().dataChanged.disconnect(
+                    event_handler.handle_data_change)
             if GISCloudQgisUtils.is_vector_layer(layer):
                 layer.editingStopped.disconnect(
                     event_handler.handle_data_change)
