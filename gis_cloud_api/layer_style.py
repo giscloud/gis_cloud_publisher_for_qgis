@@ -330,6 +330,14 @@ class GISCloudLayerStyle(object):
                 if rule.filterExpression():
                     style['expression'] = rule.filterExpression().replace('"',
                                                                           '')
+                    expressionEqualIndex = re.search(' = ', style['expression']).span()
+                    columnName = style['expression'][:expressionEqualIndex[0]]
+                    layer = iface.activeLayer()
+
+                    for i in layer.attributeTableConfig().columns():
+                        if i.name == columnName and layer.fields().field(columnName).typeName() == "String":
+                            style['expression'] = style['expression'][:expressionEqualIndex[1]] + "\'" + style['expression'][expressionEqualIndex[1]:] + "\'"
+
                 expression = self.qgis_layer.subsetString().replace('"', '')
                 if expression and expression != '':
                     if 'expression' in style and style['expression'] != '':
