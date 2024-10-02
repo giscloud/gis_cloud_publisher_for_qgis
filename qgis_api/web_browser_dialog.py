@@ -25,7 +25,7 @@
  *                                                                         *
  ***************************************************************************/
 
- This is web brower dialog that shows up for Google and Facebook SSO.
+ This is web brower dialog that shows up for Google SSO.
 
  We use cookie jar to keep the session state and get session from GIS Cloud to
  authorize and retrieve api key for permanent login.
@@ -48,7 +48,7 @@ else:
 
 
 class GISCloudQgisWebBrowserDialog(QDialog):
-    """Web browser used for Google/Facebook SSO"""
+    """Web browser used for Google SSO"""
 
     def __init__(self, parent, size, url):
         super(GISCloudQgisWebBrowserDialog, self).__init__(

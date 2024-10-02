@@ -84,10 +84,6 @@ class GISCloudUiLogin(QObject):
             self.authorize_sso_google)
         self.login_sso_dock.google_img.clicked.connect(
             self.authorize_sso_google)
-        self.login_sso_dock.facebook.clicked.connect(
-            self.authorize_sso_facebook)
-        self.login_sso_dock.facebook_img.clicked.connect(
-            self.authorize_sso_facebook)
         self.login_sso_dock.back.clicked.connect(
             self.manager.restore_previous_dock_widget)
 
@@ -97,14 +93,6 @@ class GISCloudUiLogin(QObject):
         """Show login SSO widget"""
         # pylint: disable=W0613
         self.manager.set_dock_widget(self.login_sso_dock)
-
-    def authorize_sso_facebook(self):
-        """Launches browser to login with Facebook"""
-        self.web_browser = GISCloudQgisWebBrowserDialog(
-            self,
-            QSize(450, 450),
-            "https://editor.giscloud.com/auth/facebook_html")
-        self.web_browser.show()
 
     def authorize_sso_google(self):
         """Launches browser to login with Google"""
