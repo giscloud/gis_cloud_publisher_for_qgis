@@ -48,6 +48,7 @@ else:
 LOGIN_DOCK_WIDGET_FILE = "login.ui"
 LOGIN_PROGRESS_DOCK_WIDGET_FILE = "login_progress.ui"
 LOGIN_SSO_DOCK_WIDGET_FILE = "login_sso.ui"
+CHANGE_SERVER_WIDGET_FILE = "change_server.ui"
 
 LOGGER = get_gc_publisher_logger(__name__)
 
@@ -71,6 +72,8 @@ class GISCloudUiLogin(QObject):
             path, LOGIN_PROGRESS_DOCK_WIDGET_FILE))
         self.login_sso_dock = uic.loadUi(os.path.join(
             path, LOGIN_SSO_DOCK_WIDGET_FILE))
+        self.change_server_dock = uic.loadUi(os.path.join(
+            path, CHANGE_SERVER_WIDGET_FILE))
 
         self.login_dock.login.clicked.connect(self.login)
         self.login_dock.username.returnPressed.connect(self.login)
@@ -79,6 +82,7 @@ class GISCloudUiLogin(QObject):
         self.login_dock.eye.clicked.connect(
             self.login_toggle_password_visibility)
         self.login_dock.visible_password = True
+        self.login_dock.change_server.mousePressEvent = self.show_change_server
 
         self.login_sso_dock.google.clicked.connect(
             self.authorize_sso_google)
@@ -87,12 +91,29 @@ class GISCloudUiLogin(QObject):
         self.login_sso_dock.back.clicked.connect(
             self.manager.restore_previous_dock_widget)
 
+        self.change_server_dock.back.clicked.connect(
+            self.manager.restore_previous_dock_widget)
+        self.change_server_dock.save.clicked.connect(self.save_server)
+
         self.login_toggle_password_visibility()
+
+        self.change_server_dock.server.setText(self.api.host)
 
     def show_sso(self, event):
         """Show login SSO widget"""
         # pylint: disable=W0613
         self.manager.set_dock_widget(self.login_sso_dock)
+
+    def show_change_server(self, event):
+        """Show Change server widget"""
+        # pylint: disable=W0613
+        self.manager.set_dock_widget(self.change_server_dock)
+
+    def save_server(self):
+        """Save server change"""
+        self.api.host = self.change_server_dock.server.text()
+        self.api.editor_host = self.api.host.replace("api", "editor")
+        self.manager.restore_previous_dock_widget()
 
     def authorize_sso_google(self):
         """Launches browser to login with Google"""
