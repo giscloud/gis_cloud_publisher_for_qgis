@@ -3,7 +3,7 @@ name=GIS Cloud Publisher
 qgisMinimumVersion=2.10
 qgisMaximumVersion=3.99
 description=Transfer your QGIS projects to GIS Cloud and share online with others
-version=1.0.9
+version=1.0.10
 author=GIS Cloud Ltd.
 email=info@giscloud.com
 about=GIS Cloud Publisher allows you to publish your maps and data from QGIS to GIS Cloud with one click, preserving your symbology and integrating your desktop solution with the cloud. You can also update all changes to your QGIS project (or to specific layers) and sync it with published maps in GIS Cloud, as your project evolves. Share your maps privately or publicly through GIS Cloud with your colleagues and the public.
@@ -16,6 +16,9 @@ icon=ui/img/icon.png
 experimental=False
 deprecated=False
 changelog=
+    1.0.10
+    - remove Facebook SSO
+    - allow changing server endpoint via UI
     1.0.9
     - enable numeric expressions in String columns
     1.0.8
