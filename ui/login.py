@@ -34,16 +34,17 @@ import os.path
 
 from ..qgis_api.logger import get_gc_publisher_logger
 from ..qgis_api.version import ISQGIS3
-from ..qgis_api.web_browser_dialog import GISCloudQgisWebBrowserDialog
+from ..qgis_api.sso_server import SSOCallbackServer
 
 if ISQGIS3:
     from PyQt5 import QtCore, uic
-    from PyQt5.QtCore import QObject, QSize
+    from PyQt5.QtCore import QObject, QUrl
+    from PyQt5.QtGui import QDesktopServices
     from PyQt5.QtWidgets import QGraphicsOpacityEffect, QLineEdit
 else:
     from PyQt4 import QtCore, uic
-    from PyQt4.QtCore import QObject, QSize
-    from PyQt4.QtGui import QGraphicsOpacityEffect, QLineEdit
+    from PyQt4.QtCore import QObject, QUrl
+    from PyQt4.QtGui import QDesktopServices, QGraphicsOpacityEffect, QLineEdit
 
 LOGIN_DOCK_WIDGET_FILE = "login.ui"
 LOGIN_PROGRESS_DOCK_WIDGET_FILE = "login_progress.ui"
@@ -62,7 +63,8 @@ class GISCloudUiLogin(QObject):
         self.iface = self.manager.iface
         self.api = self.manager.api
         self.is_auth = False
-        self.web_browser = None
+        self.sso_server = None
+        self.sso_timer = None
         self.animation = None
 
         path = os.path.dirname(os.path.abspath(__file__))
@@ -88,6 +90,7 @@ class GISCloudUiLogin(QObject):
             self.authorize_sso_google)
         self.login_sso_dock.google_img.clicked.connect(
             self.authorize_sso_google)
+        self.login_sso_dock.back.clicked.connect(self._cancel_sso)
         self.login_sso_dock.back.clicked.connect(
             self.manager.restore_previous_dock_widget)
 
@@ -116,12 +119,35 @@ class GISCloudUiLogin(QObject):
         self.manager.restore_previous_dock_widget()
 
     def authorize_sso_google(self):
-        """Launches browser to login with Google"""
-        self.web_browser = GISCloudQgisWebBrowserDialog(
-            self,
-            QSize(650, 650),
-            "https://editor.giscloud.com/auth/google?return=session")
-        self.web_browser.show()
+        """Launches default browser to login with Google"""
+        self._cancel_sso()
+
+        self.sso_server = SSOCallbackServer()
+        self.sso_server.start()
+
+        sso_url = ("{}auth/google?return=session&local_redirect_port={}"
+                   .format(self.api.editor_host, self.sso_server.port))
+        QDesktopServices.openUrl(QUrl(sso_url))
+
+        self.sso_timer = QtCore.QTimer()
+        self.sso_timer.timeout.connect(self._poll_sso_session)
+        self.sso_timer.start(500)
+
+    def _poll_sso_session(self):
+        """Check if SSO session has been received from browser"""
+        if self.sso_server and self.sso_server.session:
+            session = self.sso_server.session
+            self._cancel_sso()
+            self.api.user.session = session
+            self.login()
+
+    def _cancel_sso(self):
+        """Cancel ongoing SSO process"""
+        if self.sso_timer and self.sso_timer.isActive():
+            self.sso_timer.stop()
+        if self.sso_server:
+            self.sso_server.stop()
+            self.sso_server = None
 
     def login_toggle_password_visibility(self):
         """Toggles password visibility in the user login form"""
