@@ -193,6 +193,9 @@ class GISCloudPublisher(QObject):
 
         self.main_widget.opened.connect(self.__dock_widget_opened)
         self.main_widget.closed.connect(self.__dock_widget_closed)
+        if hasattr(self.qgis_api.project, 'fileNameChanged'):
+            self.qgis_api.project.fileNameChanged.connect(
+                self.__handle_project_file_name_changed)
         self.iface.addDockWidget(
             qt_enum(Qt, 'DockWidgetArea', 'LeftDockWidgetArea'),
             self.main_widget)
@@ -375,6 +378,9 @@ class GISCloudPublisher(QObject):
         GISCloudNetworkHandler.cancel()
         gc_publisher_loggers_unload()
         self.__dock_widget_closed()
+        if hasattr(self.qgis_api.project, 'fileNameChanged'):
+            self.qgis_api.project.fileNameChanged.disconnect(
+                self.__handle_project_file_name_changed)
         self.main_widget.opened.disconnect(self.__dock_widget_opened)
         self.main_widget.closed.disconnect(self.__dock_widget_closed)
         self.iface.removeDockWidget(self.main_widget)
@@ -509,8 +515,66 @@ class GISCloudPublisher(QObject):
         if self.is_initialized:
             self.__project_check()
 
+    def __handle_project_file_name_changed(self):
+        """QGIS emits this on "Save as" (before the file is written) and
+        after a project has been opened. Both are moments where a copy of
+        a published project can be detected."""
+        if self.__check_project_copy() and self.is_initialized:
+            self.__project_check()
+
+    def __check_project_copy(self):
+        """A "Save as" copy (or a file copy) of a published project inherits
+        the GIS Cloud map link stored in the project properties. Compare the
+        project path recorded at publish time with the current one; when
+        they differ the project is a copy, so detach it from the map and
+        treat it as a new, unpublished project.
+        Returns True when the project has been detached."""
+        project = self.qgis_api.project
+        if project.readEntry("giscloud_project", "save_as")[0] == '':
+            return False
+
+        current_path = project.fileName()
+        if not current_path:
+            return False
+
+        stored_path = project.readEntry("giscloud_project", "file_path")[0]
+        if not stored_path:
+            # published before the path was recorded, or published before
+            # the project was ever saved: adopt the current path
+            project.writeEntry("giscloud_project", "file_path", current_path)
+            return False
+
+        if GISCloudQgisUtils.same_path(stored_path, current_path):
+            return False
+
+        map_name = project.readEntry('giscloud_map_name', 'name')[0]
+        LOGGER.info("Project copy detected: {} -> {}".format(stored_path,
+                                                            current_path))
+        self.__detach_project()
+        self.iface.messageBar().pushInfo(
+            "GIS Cloud Publisher",
+            ('This project is a copy of "{0}" and is no longer linked to ' +
+             'the GIS Cloud map "{1}". You can publish it as a new map.')
+            .format(os.path.basename(stored_path), map_name))
+        return True
+
+    def __detach_project(self):
+        """Forget the GIS Cloud map this project was linked to."""
+        project = self.qgis_api.project
+        project.removeEntry('giscloud_project', 'save_as')
+        project.removeEntry('giscloud_project', 'file_path')
+        project.removeEntry('giscloud_map_name', 'name')
+        project.removeEntry('giscloud_layers_data_state', 'state')
+        self.qgis_api.layer_data_timestamps = {}
+        self.qgis_api.map_name_override = None
+        self.qgis_api.last_analysis = {"time": 0}
+        self.api.map.map_id = None
+        self.api.map.map_name = self.qgis_api.get_map_name()
+        self.check = False
+
     def __project_check(self):
         """Check if loaded project is already synced with GIS Cloud."""
+        self.__check_project_copy()
         self.qgis_api.map_name_override = None
 
         self.api.map.map_name = self.qgis_api.get_map_name(True)

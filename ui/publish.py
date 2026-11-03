@@ -223,6 +223,13 @@ class GISCloudUiPublish(QObject):
             map_name)
         self.api.map.map_name = map_name
 
+        # remember which project file this map link belongs to, so that
+        # a "Save as" copy of the project can be told apart from the original
+        self.qgis_api.project.writeEntry(
+            'giscloud_project',
+            'file_path',
+            self.qgis_api.project.fileName())
+
     def publish_done(self):
         """Finish publishing and write new config info."""
         self.publish_write_state()

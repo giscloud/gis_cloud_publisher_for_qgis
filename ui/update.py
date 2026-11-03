@@ -103,6 +103,8 @@ class GISCloudUiUpdate(QObject):
 
         self.update_done_dock.open_map.clicked.connect(self.open_map)
         self.update_done_dock.copy_map_link.clicked.connect(self.copy_link)
+        self.update_done_dock.publish_new.clicked.connect(
+            self.new_map_upload)
         self.update_done_dock.logout.mousePressEvent = \
             self.manager.login_control.logout
 

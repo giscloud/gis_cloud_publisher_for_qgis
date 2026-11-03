@@ -265,6 +265,14 @@ class GISCloudQgisUtils(object):
         clipboard_handler.setText(content)
 
     @staticmethod
+    def same_path(path1, path2):
+        """Compare two file system paths, ignoring case and separator
+        differences where the OS does."""
+        def normalize(path):
+            return os.path.normcase(os.path.normpath(os.path.abspath(path)))
+        return normalize(path1) == normalize(path2)
+
+    @staticmethod
     def is_vector_layer(layer):
         """checking if layer is vector type """
         return isinstance(layer, QgsVectorLayer)

@@ -81,6 +81,7 @@ class GISCloudMap(object):
         """Deatch a map if user wants to publish as a new map"""
         self.map_id = None
         self.qgis_api.project.removeEntry('giscloud_project', 'save_as')
+        self.qgis_api.project.removeEntry('giscloud_project', 'file_path')
 
     def update_map(self):
         """Update existing map on GIS Cloud"""
