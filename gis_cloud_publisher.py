@@ -41,20 +41,25 @@ from .qgis_api.core import GISCloudQgisCore
 from .qgis_api.layer_event import GISCloudQgisLayerEvent
 from .qgis_api.logger import gc_publisher_loggers_unload
 from .qgis_api.logger import get_gc_publisher_logger
+from .qgis_api.qt import qt_enum
 from .qgis_api.utils import GISCloudQgisUtils
-from .qgis_api.version import ISQGIS3
+from .qgis_api.version import ISQGIS2, ISQGIS3, ISQGIS4
 from .ui.login import GISCloudUiLogin
 from .ui.publish import GISCloudUiPublish
 from .ui.update import GISCloudUiUpdate
 from .workers.check_connection import GISCloudWorkerCheckConnection
 from .workers.map_analysis import GISCloudWorkerMapAnalysis
 
-if ISQGIS3:
+if ISQGIS3 or ISQGIS4:
     from .ui import resources5  # noqa:F401 pylint:disable=unused-import
 else:
     from .ui import resources4  # noqa:F401 pylint:disable=unused-import
 
-if ISQGIS3:
+if ISQGIS4:
+    from qgis.PyQt.QtCore import Qt, QEvent, QObject, QSize, QTimer
+    from qgis.PyQt.QtGui import QIcon
+    from qgis.PyQt.QtWidgets import QAction, QMessageBox
+elif ISQGIS3:
     from PyQt5.QtCore import Qt, QEvent, QObject, QSize, QTimer
     from PyQt5.QtGui import QIcon
     from PyQt5.QtWidgets import QAction, QMessageBox
@@ -63,6 +68,14 @@ else:
     from PyQt4.QtGui import QAction, QIcon, QMessageBox
 
 LOGGER = get_gc_publisher_logger(__name__)
+MSG_SAVE = qt_enum(QMessageBox, 'StandardButton', 'Save')
+MSG_CANCEL = qt_enum(QMessageBox, 'StandardButton', 'Cancel')
+MSG_OK = qt_enum(QMessageBox, 'StandardButton', 'Ok')
+PALETTE_CHANGE = qt_enum(QEvent, 'Type', 'PaletteChange')
+# All .ui forms are designed with absolute positions on a 360x290 canvas.
+# The dock derives its own size from this plus the title bar height,
+# which differs between Qt versions and platforms.
+DOCK_CONTENT_SIZE = QSize(360, 290)
 
 
 class GISCloudPublisher(QObject):
@@ -140,7 +153,7 @@ class GISCloudPublisher(QObject):
         self.adjust_theme(self.publish_control.publish_details_dock.map_name,
                           True)
 
-        if ISQGIS3:
+        if ISQGIS3 or ISQGIS4:
             components = (self.login_control.login_dock.username,
                           self.login_control.login_dock.password,
                           self.publish_control.publish_details_dock.map_name)
@@ -153,7 +166,7 @@ class GISCloudPublisher(QObject):
         self.check_task.wrongApiSignal.connect(self.__wrong_api_notify)
 
         self.map_analysis_task = GISCloudWorkerMapAnalysis(self.qgis_api)
-        if ISQGIS3:
+        if ISQGIS3 or ISQGIS4:
             self.map_analysis_task.result.connect(
                 self.__handle_project_update_test)
 
@@ -161,7 +174,6 @@ class GISCloudPublisher(QObject):
         self.analysis_timer.timeout.connect(self.__run_analysis)
 
         self.main_widget = QgsDockWidget("Publisher")
-        self.main_widget.setFixedSize(QSize(360, 310))
         self.main_widget.setObjectName("GISCloudPublisherMainDockWidget")
 
         self.login_control.is_auth = self.api.user.is_auth_api()
@@ -169,7 +181,7 @@ class GISCloudPublisher(QObject):
             self.set_dock_widget(self.publish_control.publish_dock)
         else:
             self.set_dock_widget(self.login_control.login_dock)
-            if ISQGIS3:
+            if ISQGIS3 or ISQGIS4:
                 self.login_control.login_dock.username.setFocus()
 
         self.action = QAction(
@@ -181,13 +193,15 @@ class GISCloudPublisher(QObject):
 
         self.main_widget.opened.connect(self.__dock_widget_opened)
         self.main_widget.closed.connect(self.__dock_widget_closed)
-        self.iface.addDockWidget(Qt.LeftDockWidgetArea, self.main_widget)
+        self.iface.addDockWidget(
+            qt_enum(Qt, 'DockWidgetArea', 'LeftDockWidgetArea'),
+            self.main_widget)
 
     def eventFilter(self, obj, event):
         """This is needed to filter events and hook on palette change,
         to detect lite/dark mode switches"""
         # pylint: disable=C0103
-        if event.type() == QEvent.PaletteChange:
+        if event.type() == PALETTE_CHANGE:
             self.adjust_theme(obj)
             return True
 
@@ -248,8 +262,8 @@ class GISCloudPublisher(QObject):
                 'Information',
                 'To be able to update this QGIS project later and ' +
                 'sync it with published GIS Cloud map, please save it now.',
-                self.message_box.Save, self.message_box.Cancel)
-            if save == self.message_box.Save:
+                MSG_SAVE, MSG_CANCEL)
+            if save == MSG_SAVE:
                 # have to save project like this,
                 # otherwise qgis doesn't detect that
                 # project has been saved
@@ -265,8 +279,8 @@ class GISCloudPublisher(QObject):
                                  "was deleted from GIS Cloud, " +
                                  "so it can't be updated. " +
                                  "You can publish your map again.",
-                                 self.message_box.Ok,
-                                 self.message_box.Ok)
+                                 MSG_OK,
+                                 MSG_OK)
         self.__project_check()
 
     def publishing_cancel(self):
@@ -286,6 +300,7 @@ class GISCloudPublisher(QObject):
 
         self.previous_dock_widget = self.current_dock_widget
         self.current_dock_widget = widget
+        widget.setFixedSize(DOCK_CONTENT_SIZE)
         self.main_widget.setWidget(widget)
         self.main_widget.show()
 
@@ -318,8 +333,8 @@ class GISCloudPublisher(QObject):
 
         failed = self.message_box.critical(self.iface.mainWindow(),
                                            'Error', message,
-                                           self.message_box.Ok)
-        if failed == self.message_box.Ok:
+                                           MSG_OK)
+        if failed == MSG_OK:
             self.publish_control.sync_task.quit()
             self.__project_check()
 
@@ -372,7 +387,7 @@ class GISCloudPublisher(QObject):
         if not self.login_control.is_auth or not self.api.user.username:
             self.login_control.is_auth = None
             self.set_dock_widget(self.login_control.login_dock)
-            if ISQGIS3:
+            if ISQGIS3 or ISQGIS4:
                 self.login_control.login_dock.username.setFocus()
         else:
             self.set_dock_widget(self.publish_control.publish_dock)
@@ -393,7 +408,7 @@ class GISCloudPublisher(QObject):
 
         self.objects_with_connected_signals.append(root)
 
-        if not ISQGIS3:
+        if ISQGIS2:
             root.addedChildren.connect(self.__handle_added_child)
             return
 
@@ -410,7 +425,7 @@ class GISCloudPublisher(QObject):
         if root not in self.objects_with_connected_signals:
             return
 
-        if not ISQGIS3:
+        if ISQGIS2:
             root.addedChildren.disconnect(self.__handle_added_child)
             return
 
@@ -438,7 +453,7 @@ class GISCloudPublisher(QObject):
             if GISCloudQgisUtils.is_vector_layer(layer):
                 layer.editingStopped.connect(event_handler.handle_data_change)
 
-            if not ISQGIS3:
+            if ISQGIS2:
                 continue
 
             if hasattr(layer, "dataSourceChanged"):
@@ -464,7 +479,7 @@ class GISCloudPublisher(QObject):
                 layer.editingStopped.disconnect(
                     event_handler.handle_data_change)
 
-            if not ISQGIS3:
+            if ISQGIS2:
                 continue
 
             if hasattr(layer, "dataSourceChanged"):
@@ -476,7 +491,7 @@ class GISCloudPublisher(QObject):
                     signal.disconnect(self.handle_project_update)
 
     def __unhook_all_events(self, unhook_layer_events=True):
-        if unhook_layer_events or ISQGIS3:
+        if unhook_layer_events or ISQGIS3 or ISQGIS4:
             self.__unhook_on_layer_events(
                 GISCloudQgisUtils.get_qgis_layers(self.qgis_api.project))
             self.__unhook_on_layer_legend()
@@ -488,7 +503,7 @@ class GISCloudPublisher(QObject):
         self.__hook_on_layer_legend()
         self.__hook_on_layer_events(
             GISCloudQgisUtils.get_qgis_layers(self.qgis_api.project))
-        if ISQGIS3:
+        if ISQGIS3 or ISQGIS4:
             self.qgis_api.project.legendLayersAdded.connect(
                 self.__hook_on_layer_events)
         if self.is_initialized:
@@ -521,7 +536,7 @@ class GISCloudPublisher(QObject):
                         'state')[0]
                     self.qgis_api.layer_data_timestamps = json.loads(
                         layer_data_timestamps) if layer_data_timestamps else {}
-                    if not ISQGIS3:
+                    if ISQGIS2:
                         self.set_dock_widget(
                             self.update_control.update_dock)
                         self.set_login_info(
@@ -557,8 +572,8 @@ class GISCloudPublisher(QObject):
             'No internet connection. ' +
             'It looks like you are not connected to the internet. ' +
             'Please check your internet connection and try again.',
-            self.message_box.Ok)
-        if notify == self.message_box.Ok:
+            MSG_OK)
+        if notify == MSG_OK:
             self.message_box.close()
 
     def __wrong_api_notify(self):
@@ -570,8 +585,8 @@ class GISCloudPublisher(QObject):
             'Warning',
             'It seems that you have deleted your api key. ' +
             'Please log out in order to refresh api key.',
-            self.message_box.Ok)
-        if wrong_api == self.message_box.Ok:
+            MSG_OK)
+        if wrong_api == MSG_OK:
             self.message_box.close()
 
     def __toggle_dock(self):

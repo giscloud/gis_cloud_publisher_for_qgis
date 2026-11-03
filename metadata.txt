@@ -1,7 +1,8 @@
 [general]
 name=GIS Cloud Publisher
 qgisMinimumVersion=2.10
-qgisMaximumVersion=3.99
+qgisMaximumVersion=4.99
+supportsQt6=True
 description=Transfer your QGIS projects to GIS Cloud and share online with others
 version=1.0.11
 author=GIS Cloud Ltd.

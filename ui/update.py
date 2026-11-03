@@ -33,10 +33,16 @@ import os
 import os.path
 
 from ..qgis_api.logger import get_gc_publisher_logger
+from ..qgis_api.qt import qt_enum
 from ..qgis_api.utils import GISCloudQgisUtils
-from ..qgis_api.version import ISQGIS3
+from ..qgis_api.version import ISQGIS2, ISQGIS3, ISQGIS4
 
-if ISQGIS3:
+if ISQGIS4:
+    from qgis.PyQt import uic
+    from qgis.PyQt.QtCore import QUrl, QObject
+    from qgis.PyQt.QtWidgets import QMessageBox
+    from qgis.PyQt.QtGui import QDesktopServices
+elif ISQGIS3:
     from PyQt5 import uic
     from PyQt5.QtCore import QUrl, QObject
     from PyQt5.QtWidgets import QMessageBox
@@ -52,6 +58,8 @@ UPDATE_DONE_DOCK_WIDGET_FILE = "update_done.ui"
 UPDATE_SELECT_DOCK_WIDGET_FILE = "update_select.ui"
 
 LOGGER = get_gc_publisher_logger(__name__)
+MSG_YES = qt_enum(QMessageBox, 'StandardButton', 'Yes')
+MSG_CANCEL = qt_enum(QMessageBox, 'StandardButton', 'Cancel')
 
 
 class GISCloudUiUpdate(QObject):
@@ -160,7 +168,7 @@ class GISCloudUiUpdate(QObject):
             self.manager.publish_control.publish_project()
             return
 
-        if not ISQGIS3:
+        if ISQGIS2:
             self.qgis_api.analyze_layers()
 
         if not self.api.map.map_id:
@@ -214,7 +222,7 @@ class GISCloudUiUpdate(QObject):
             'Are you sure you want to upload this map as new?',
             'You won\'t be able to update ' +
             'the previously uploaded version of this map.',
-            self.message_box.Yes,
-            self.message_box.Cancel)
-        if new_share_info == self.message_box.Yes:
+            MSG_YES,
+            MSG_CANCEL)
+        if new_share_info == MSG_YES:
             self.show_update_select(False, False)

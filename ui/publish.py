@@ -34,11 +34,16 @@ import os
 import os.path
 
 from ..qgis_api.logger import get_gc_publisher_logger
-from ..qgis_api.version import ISQGIS3
+from ..qgis_api.qt import qt_enum
+from ..qgis_api.version import ISQGIS2, ISQGIS3, ISQGIS4
 from ..workers.map_check import GISCloudWorkerMapCheck
 from ..workers.sync import GISCloudWorkerSync
 
-if ISQGIS3:
+if ISQGIS4:
+    from qgis.PyQt import QtGui, uic
+    from qgis.PyQt.QtCore import QObject, QSize
+    from qgis.PyQt.QtWidgets import QMessageBox
+elif ISQGIS3:
     from PyQt5 import QtGui, uic
     from PyQt5.QtCore import QObject, QSize
     from PyQt5.QtWidgets import QMessageBox
@@ -52,6 +57,7 @@ PUBLISH_DETAILS_DOCK_WIDGET_FILE = "publish_details.ui"
 PUBLISH_PROGRESS_DOCK_WIDGET_FILE = "publish_progress.ui"
 
 LOGGER = get_gc_publisher_logger(__name__)
+MSG_OK = qt_enum(QMessageBox, 'StandardButton', 'Ok')
 
 
 class GISCloudUiPublish(QObject):
@@ -109,7 +115,7 @@ class GISCloudUiPublish(QObject):
     def check_map_for_publish(self):
         """check if map is eligible for publish"""
         is_new_map = self.api.map.map_id is None
-        if not ISQGIS3 or is_new_map:
+        if ISQGIS2 or is_new_map:
             self.qgis_api.analyze_layers(False,
                                          is_new_map)
         if (is_new_map and
@@ -118,8 +124,8 @@ class GISCloudUiPublish(QObject):
                       'you wish to publish to GIS Cloud.'
             self.message_box.warning(self.iface.mainWindow(), 'Warning',
                                      message,
-                                     self.message_box.Ok,
-                                     self.message_box.Ok)
+                                     MSG_OK,
+                                     MSG_OK)
             return False
         return True
 
@@ -178,8 +184,8 @@ class GISCloudUiPublish(QObject):
                 "inside your GIS Cloud account. \n\n" +
                 "You can also contact sales@giscloud.com " +
                 "to get a Premium subscription.",
-                self.message_box.Ok,
-                self.message_box.Ok)
+                MSG_OK,
+                MSG_OK)
             return
         self.qgis_api.map_name_override = \
             self.publish_details_dock.map_name.text()

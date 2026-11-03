@@ -6,7 +6,12 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-from PyQt5 import QtCore
+from ..qgis_api.version import ISQGIS4
+
+if ISQGIS4:
+    from qgis.PyQt import QtCore
+else:
+    from PyQt5 import QtCore
 
 qt_resource_data = b"\
 \x00\x00\x08\x89\

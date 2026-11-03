@@ -36,15 +36,17 @@ import re
 from qgis.core import QgsPalLayerSettings, QgsRenderContext, QgsUnitTypes
 from qgis.utils import iface
 
-from ..qgis_api.version import ISQGIS3
+from ..qgis_api.version import ISQGIS2, ISQGIS3, ISQGIS4
 from ..qgis_api.logger import get_gc_publisher_logger
 
-if ISQGIS3:
+if ISQGIS3 or ISQGIS4:
     from qgis.core import QgsFillSymbol, QgsRuleBasedRenderer
 else:
     from qgis.core import QgsFillSymbolV2, QgsRuleBasedRendererV2
 
-if ISQGIS3:
+if ISQGIS4:
+    from qgis.PyQt.QtCore import QSize
+elif ISQGIS3:
     from PyQt5.QtCore import QSize
 else:
     from PyQt4.QtCore import QSize
@@ -75,7 +77,7 @@ class GISCloudLayerStyle(object):
         map style on GIS Cloud.
         """
         LOGGER.debug('Started map_styles function')
-        if ISQGIS3:
+        if ISQGIS3 or ISQGIS4:
             self.scale_pixels = \
                 iface.mapCanvas().mapSettings().outputDpi() / 72
         else:
@@ -107,7 +109,7 @@ class GISCloudLayerStyle(object):
                     math.log((factor / self.qgis_layer.maximumScale()), 2),
                     0))
 
-            if not ISQGIS3:
+            if ISQGIS2:
                 # QGis2 has oposite logic with min/max scales
                 # so we need to switch them
                 (layer_tolevel, layer_fromlevel) = \
@@ -116,7 +118,7 @@ class GISCloudLayerStyle(object):
         styles = []
         tmp_dir = self.gc_api.qgis_api.tmp_dir
 
-        if ISQGIS3:
+        if ISQGIS3 or ISQGIS4:
             renderer = QgsRuleBasedRenderer.convertFromRenderer(
                 self.qgis_layer.renderer())
         else:
@@ -147,7 +149,7 @@ class GISCloudLayerStyle(object):
                 # in case of multiple symbolLayers()
                 # labels should be set only once
                 if is_first_sym:
-                    if ISQGIS3:
+                    if ISQGIS3 or ISQGIS4:
                         if self.qgis_layer.labelsEnabled():
                             val_label = self.qgis_layer.labeling().settings()
                     else:
@@ -252,7 +254,7 @@ class GISCloudLayerStyle(object):
                         else:
                             temp_style_hatch = temp_style.copy()
                             temp_style_hatch["outline_style"] = "no"
-                            if ISQGIS3:
+                            if ISQGIS3 or ISQGIS4:
                                 temp_symbol = QgsFillSymbol.createSimple(
                                     temp_style_hatch)
                             else:
@@ -281,7 +283,7 @@ class GISCloudLayerStyle(object):
                                        line_width,
                                        style)
 
-                if ISQGIS3:
+                if ISQGIS3 or ISQGIS4:
                     if val_label is not None:
                         label_format = val_label.format()
                         style['fontsize'] = label_format.size()
@@ -359,7 +361,7 @@ class GISCloudLayerStyle(object):
 
                 if self.qgis_layer.hasScaleBasedVisibility():
                     factor = dpi * inches_per_meter * max_scale_per_pixel
-                    if ISQGIS3 and rule.minimumScale() > 0:
+                    if (ISQGIS3 or ISQGIS4) and rule.minimumScale() > 0:
                         style['fromlevel'] = \
                             int(round(
                                 math.log((factor / rule.minimumScale()), 2),
@@ -367,7 +369,7 @@ class GISCloudLayerStyle(object):
                     elif layer_fromlevel > 0:
                         style['fromlevel'] = layer_fromlevel
 
-                    if ISQGIS3 and rule.maximumScale() > 0:
+                    if (ISQGIS3 or ISQGIS4) and rule.maximumScale() > 0:
                         style['tolevel'] = \
                             int(round(
                                 math.log((factor / rule.maximumScale()), 2),
@@ -426,13 +428,13 @@ class GISCloudLayerStyle(object):
         LOGGER.debug('Started map_alpha function')
         alpha = 1.0
 
-        if ISQGIS3:
+        if ISQGIS3 or ISQGIS4:
             symbols = self.qgis_layer.renderer().symbols(QgsRenderContext())
         else:
             symbols = self.qgis_layer.rendererV2().symbols2(QgsRenderContext())
 
         for symbol in symbols:
-            if ISQGIS3:
+            if ISQGIS3 or ISQGIS4:
                 alpha = symbol.opacity() * 100
             else:
                 alpha = symbol.alpha() * 100
@@ -467,7 +469,7 @@ class GISCloudLayerStyle(object):
 
     def setup_label_offset(self, val_label, style):
         """Helper method to translate label offset to GIS Cloud."""
-        if ISQGIS3:
+        if ISQGIS3 or ISQGIS4:
             offset_to_px = self.convert_render_units_to_px(
                 val_label.offsetUnits)
         else:
