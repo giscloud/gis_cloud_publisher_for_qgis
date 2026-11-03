@@ -34,7 +34,7 @@ try:
 except ImportError:  # QGIS 2
     from qgis.core import QGis as Qgis
 
-GIS_CLOUD_PUBLISHER_VERSION = "1.0.11"
+GIS_CLOUD_PUBLISHER_VERSION = "1.1.0"
 QGIS_VERSION = Qgis.QGIS_VERSION
 QGIS_VERSION_INT = Qgis.QGIS_VERSION_INT
 
