@@ -45,14 +45,16 @@ from qgis.utils import iface
 
 from .logger import get_gc_publisher_logger
 from .utils import GISCloudQgisUtils
-from .version import ISQGIS3
+from .version import ISQGIS2, ISQGIS3, ISQGIS4
 from ..gis_cloud_api.layer import GISCloudLayer
 from ..gis_cloud_api.layer_style import GISCloudLayerStyle
 
-if not ISQGIS3:
+if ISQGIS2:
     from qgis.core import QGis
 
-if ISQGIS3:
+if ISQGIS4:
+    from qgis.PyQt.QtCore import Qt, QFileInfo
+elif ISQGIS3:
     from PyQt5.QtCore import Qt, QFileInfo
 else:
     from PyQt4.QtCore import Qt, QFileInfo
@@ -144,7 +146,7 @@ class GISCloudQgisCore(object):
             provider_type = layer.providerType().lower()
             ext = layer.source().split('.')[-1].lower()
 
-            if ISQGIS3:
+            if ISQGIS3 or ISQGIS4:
                 is_visible = self.project.layerTreeRoot().findLayer(
                     layer.id()).itemVisibilityChecked()
             else:
@@ -238,7 +240,7 @@ class GISCloudQgisCore(object):
 
     def get_project_crs(self):
         """Getting project CRS to transfer it to a GIS Cloud map"""
-        if ISQGIS3:
+        if ISQGIS3 or ISQGIS4:
             crs = self.project.crs()
         else:
             crs = iface.mapCanvas().mapSettings().destinationCrs()
@@ -250,7 +252,7 @@ class GISCloudQgisCore(object):
 
         units = "meter"
         map_units = crs.mapUnits()
-        if ISQGIS3:
+        if ISQGIS3 or ISQGIS4:
             if map_units == QgsUnitTypes.DistanceDegrees:
                 units = "degree"
             elif map_units == QgsUnitTypes.DistanceFeet:

@@ -33,10 +33,16 @@ import os
 import os.path
 
 from ..qgis_api.logger import get_gc_publisher_logger
-from ..qgis_api.version import ISQGIS3
+from ..qgis_api.qt import qt_enum
+from ..qgis_api.version import ISQGIS3, ISQGIS4
 from ..qgis_api.sso_server import SSOCallbackServer
 
-if ISQGIS3:
+if ISQGIS4:
+    from qgis.PyQt import QtCore, uic
+    from qgis.PyQt.QtCore import QObject, QUrl
+    from qgis.PyQt.QtGui import QDesktopServices
+    from qgis.PyQt.QtWidgets import QGraphicsOpacityEffect, QLineEdit
+elif ISQGIS3:
     from PyQt5 import QtCore, uic
     from PyQt5.QtCore import QObject, QUrl
     from PyQt5.QtGui import QDesktopServices
@@ -156,11 +162,13 @@ class GISCloudUiLogin(QObject):
             effect.setOpacity(0.5)
             self.login_dock.eye.setGraphicsEffect(effect)
             self.login_dock.visible_password = False
-            self.login_dock.password.setEchoMode(QLineEdit.Password)
+            self.login_dock.password.setEchoMode(
+                qt_enum(QLineEdit, 'EchoMode', 'Password'))
         else:
             self.login_dock.eye.setGraphicsEffect(None)
             self.login_dock.visible_password = True
-            self.login_dock.password.setEchoMode(QLineEdit.Normal)
+            self.login_dock.password.setEchoMode(
+                qt_enum(QLineEdit, 'EchoMode', 'Normal'))
 
     def login_done(self, loggedin):
         """Define action after sucessful/unsucessful login."""
@@ -219,5 +227,5 @@ class GISCloudUiLogin(QObject):
         self.login_dock.password.setStyleSheet(
             self.login_dock.password.default_input_style)
 
-        if ISQGIS3:
+        if ISQGIS3 or ISQGIS4:
             self.login_dock.username.setFocus()

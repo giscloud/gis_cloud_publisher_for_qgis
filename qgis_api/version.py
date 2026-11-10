@@ -29,12 +29,16 @@
 
 """
 
-import qgis.utils
-ISQGIS3 = hasattr(qgis.utils, 'Qgis')
-if ISQGIS3:
+try:
     from qgis.core import Qgis
-else:
-    from qgis.core import QGis
+except ImportError:  # QGIS 2
+    from qgis.core import QGis as Qgis
 
-GIS_CLOUD_PUBLISHER_VERSION = "1.0.11"
-QGIS_VERSION = Qgis.QGIS_VERSION if ISQGIS3 else QGis.QGIS_VERSION
+GIS_CLOUD_PUBLISHER_VERSION = "1.1.0"
+QGIS_VERSION = Qgis.QGIS_VERSION
+QGIS_VERSION_INT = Qgis.QGIS_VERSION_INT
+
+# Exactly one of these is True
+ISQGIS2 = QGIS_VERSION_INT < 30000
+ISQGIS3 = 30000 <= QGIS_VERSION_INT < 40000
+ISQGIS4 = QGIS_VERSION_INT >= 40000

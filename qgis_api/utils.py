@@ -40,10 +40,10 @@ from urllib.parse import parse_qsl
 from qgis.core import QgsApplication, QgsLayerTreeNode, QgsMapLayer
 from qgis.core import QgsVectorFileWriter, QgsVectorLayer
 from qgis.utils import iface
-from .version import ISQGIS3
+from .version import ISQGIS3, ISQGIS4
 from .logger import get_gc_publisher_logger
 
-if ISQGIS3:
+if ISQGIS3 or ISQGIS4:
     from qgis.core import QgsWkbTypes
 else:
     from qgis.core import QGis
@@ -82,7 +82,7 @@ class GISCloudQgisUtils(object):
             if layer_object.should_updata_data or gc_file not in gc_api.current_gc_files:
                 gc_api.files_to_delete_after_upload.append(
                     layer_object.source_to_convert + ".sqlite")
-                if ISQGIS3:
+                if ISQGIS3 or ISQGIS4:
                     QgsVectorFileWriter.writeAsVectorFormat(
                         layer,
                         layer_object.source_to_convert,
@@ -169,7 +169,7 @@ class GISCloudQgisUtils(object):
         if layer.type() == QgsMapLayer.RasterLayer:
             return ['raster', 999]
 
-        if ISQGIS3:
+        if ISQGIS3 or ISQGIS4:
             wkb_type = QgsWkbTypes.flatType(layer.wkbType())
             point_type = QgsWkbTypes.Point
             line_string_type = QgsWkbTypes.LineString
@@ -239,7 +239,7 @@ class GISCloudQgisUtils(object):
     @staticmethod
     def get_qgis_layers(project):
         """Return list of layers currently loaded."""
-        if ISQGIS3:
+        if ISQGIS3 or ISQGIS4:
             return [tree_layer.layer()
                     for tree_layer in
                     project.layerTreeRoot().findLayers()]
@@ -260,9 +260,17 @@ class GISCloudQgisUtils(object):
     def copy_to_cliboard(content):
         """Copy content to clipboard"""
         clipboard_handler = QgsApplication.clipboard()
-        clipboard_handler.clear(mode=clipboard_handler.Clipboard)
-        clipboard_handler.setText(content,
-                                  mode=clipboard_handler.Clipboard)
+        # mode defaults to QClipboard.Clipboard on every Qt version
+        clipboard_handler.clear()
+        clipboard_handler.setText(content)
+
+    @staticmethod
+    def same_path(path1, path2):
+        """Compare two file system paths, ignoring case and separator
+        differences where the OS does."""
+        def normalize(path):
+            return os.path.normcase(os.path.normpath(os.path.abspath(path)))
+        return normalize(path1) == normalize(path2)
 
     @staticmethod
     def is_vector_layer(layer):

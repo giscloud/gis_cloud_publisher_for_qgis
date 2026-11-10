@@ -39,15 +39,35 @@ import os
 
 from qgis.core import QgsNetworkAccessManager
 
-from ..qgis_api.version import ISQGIS3
+from ..qgis_api.qt import connect_reply_error, exec_, qt_enum
+from ..qgis_api.version import ISQGIS3, ISQGIS4
 from ..qgis_api.version import GIS_CLOUD_PUBLISHER_VERSION, QGIS_VERSION
 
-if ISQGIS3:
+if ISQGIS4:
+    from qgis.PyQt.QtCore import QByteArray, QEventLoop, QFile, QIODevice, QUrl
+    from qgis.PyQt import QtNetwork
+elif ISQGIS3:
     from PyQt5.QtCore import QByteArray, QEventLoop, QFile, QIODevice, QUrl
     from PyQt5 import QtNetwork
 else:
     from PyQt4.QtCore import QByteArray, QEventLoop, QFile, QIODevice, QUrl
     from PyQt4 import QtNetwork
+
+
+# Qt enum members, resolved in a PyQt4/5/6 compatible way
+CONTENT_TYPE_HEADER = qt_enum(QtNetwork.QNetworkRequest,
+                              'KnownHeaders', 'ContentTypeHeader')
+CONTENT_DISPOSITION_HEADER = qt_enum(QtNetwork.QNetworkRequest,
+                                     'KnownHeaders', 'ContentDispositionHeader')
+HTTP_STATUS_CODE_ATTRIBUTE = qt_enum(QtNetwork.QNetworkRequest,
+                                     'Attribute', 'HttpStatusCodeAttribute')
+IGNORED_REPLY_ERRORS = (
+    qt_enum(QtNetwork.QNetworkReply, 'NetworkError', 'ContentNotFoundError'),
+    qt_enum(QtNetwork.QNetworkReply, 'NetworkError', 'ContentAccessDenied'),
+    qt_enum(QtNetwork.QNetworkReply, 'NetworkError',
+            'ContentOperationNotPermittedError'))
+FORM_DATA_TYPE = qt_enum(QtNetwork.QHttpMultiPart, 'ContentType', 'FormDataType')
+FILE_READ_ONLY = qt_enum(QIODevice, 'OpenModeFlag', 'ReadOnly')
 
 
 class GISCloudNetworkHandler(object):
@@ -63,7 +83,7 @@ class GISCloudNetworkHandler(object):
         platform.system(),
         platform.release())
     default_request = QtNetwork.QNetworkRequest()
-    default_request.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader,
+    default_request.setHeader(CONTENT_TYPE_HEADER,
                               QByteArray(b'application/json'))
     default_request.setRawHeader(QByteArray(b'X-GIS-CLOUD-APP'),
                                  QByteArray(app_id.encode("utf-8")))
@@ -77,15 +97,14 @@ class GISCloudNetworkHandler(object):
         if self.handle_reply:
             self.reply.finished.connect(self.finished)
         if self.handle_error:
-            self.reply.error.connect(self.error)
+            connect_reply_error(self.reply, self.error)
         GISCloudNetworkHandler.reply_handlers[self] = True
 
     def finished(self):
         """Called when request has been finished.
         We are parsing status code and data that we can forward
         to a callback function"""
-        status_code = self.reply.attribute(
-            QtNetwork.QNetworkRequest.HttpStatusCodeAttribute)
+        status_code = self.reply.attribute(HTTP_STATUS_CODE_ATTRIBUTE)
         try:
             data = json.loads(self.reply.readAll().data().decode("utf-8"))
         except Exception:
@@ -99,10 +118,7 @@ class GISCloudNetworkHandler(object):
 
     def error(self, error):
         """Invoking error callback in case of a fail"""
-        errors = (QtNetwork.QNetworkReply.ContentNotFoundError,
-                  QtNetwork.QNetworkReply.ContentAccessDenied,
-                  QtNetwork.QNetworkReply.ContentOperationNotPermittedError)
-        if error not in errors:
+        if error not in IGNORED_REPLY_ERRORS:
             if self.handle_error:
                 self.handle_error(self)
             if self in GISCloudNetworkHandler.reply_handlers:
@@ -184,12 +200,11 @@ class GISCloudNetworkHandler(object):
         if progress_callback:
             reply.uploadProgress.connect(progress_callback)
         reply.finished.connect(loop.quit)
-        reply.error.connect(loop.quit)
-        loop.exec_()
+        connect_reply_error(reply, loop.quit)
+        exec_(loop)
 
         result = {}
-        result["status_code"] = reply.attribute(
-            QtNetwork.QNetworkRequest.HttpStatusCodeAttribute)
+        result["status_code"] = reply.attribute(HTTP_STATUS_CODE_ATTRIBUTE)
 
         try:
             result["response"] = json.loads(
@@ -209,17 +224,16 @@ class GISCloudNetworkHandler(object):
         zip_part_content_disposition = QByteArray(
             'form-data; name="upfile"; filename="{}"'
             .format(os.path.basename(file_to_upload)).encode('utf-8'))
-        zip_part.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader,
+        zip_part.setHeader(CONTENT_TYPE_HEADER,
                            QByteArray(b'application/json'))
-        zip_part.setHeader(QtNetwork.QNetworkRequest.ContentDispositionHeader,
+        zip_part.setHeader(CONTENT_DISPOSITION_HEADER,
                            zip_part_content_disposition)
 
         file_handler = QFile(file_to_upload)
-        file_handler.open(QIODevice.ReadOnly)
+        file_handler.open(FILE_READ_ONLY)
         zip_part.setBodyDevice(file_handler)
 
-        multi_part = QtNetwork.QHttpMultiPart(
-            QtNetwork.QHttpMultiPart.FormDataType)
+        multi_part = QtNetwork.QHttpMultiPart(FORM_DATA_TYPE)
         file_handler.setParent(multi_part)
         multi_part.append(zip_part)
 

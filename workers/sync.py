@@ -30,10 +30,12 @@
 
 """
 import os
-from ..qgis_api.version import ISQGIS3
+from ..qgis_api.version import ISQGIS3, ISQGIS4
 from ..qgis_api.logger import get_gc_publisher_logger
 
-if ISQGIS3:
+if ISQGIS4:
+    from qgis.PyQt.QtCore import QThread, pyqtSignal
+elif ISQGIS3:
     from PyQt5.QtCore import QThread, pyqtSignal
 else:
     from PyQt4.QtCore import QThread, pyqtSignal

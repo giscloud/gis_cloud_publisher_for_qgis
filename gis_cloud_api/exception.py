@@ -35,6 +35,9 @@ def handle_error(response):
     response = response['response']
     if response and "nested" in response and "msg" in response["nested"]:
         msg = response["nested"]["msg"]
+    elif response and isinstance(response, dict) and response.get("msg"):
+        # e.g. {"code": "DATASOURCE_NOT_FOUND", "msg": "Datasource not found."}
+        msg = response["msg"]
 
     raise GISCloudException(msg)
 

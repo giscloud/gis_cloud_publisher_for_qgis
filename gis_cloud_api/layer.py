@@ -32,6 +32,7 @@
 import hashlib
 import json
 import os
+import time
 import zipfile
 
 from .exception import handle_error
@@ -40,6 +41,35 @@ from ..qgis_api.logger import get_gc_publisher_logger
 from ..qgis_api.utils import GISCloudQgisUtils
 
 LOGGER = get_gc_publisher_logger(__name__)
+
+# Uploaded files are extracted on one GIS Cloud instance and become visible
+# to the others with a short delay, so a layer request that follows the
+# upload immediately can be answered with DATASOURCE_NOT_FOUND. Retry it.
+DATASOURCE_RETRIES = 5
+DATASOURCE_RETRY_DELAY = 1.0  # seconds
+
+
+def is_datasource_not_found(response):
+    """True when GIS Cloud could not (yet) resolve the layer's file source"""
+    body = response.get("response")
+    return response.get("status_code") == 404 and \
+        isinstance(body, dict) and body.get("code") == "DATASOURCE_NOT_FOUND"
+
+
+def layer_request_with_retry(request_type, url, apikey, payload):
+    """Send a layer create/update request, retrying while the server
+    reports that the uploaded file is not visible yet."""
+    attempt = 1
+    while True:
+        response = GISCloudNetworkHandler.blocking_request(
+            request_type, url, apikey, payload)
+        if not is_datasource_not_found(response) or \
+           attempt >= DATASOURCE_RETRIES:
+            return response
+        LOGGER.info('Datasource not found yet, retry {}/{} in {}s'.format(
+            attempt, DATASOURCE_RETRIES, DATASOURCE_RETRY_DELAY))
+        time.sleep(DATASOURCE_RETRY_DELAY)
+        attempt += 1
 
 
 class GISCloudLayer(object):
@@ -196,7 +226,7 @@ class GISCloudLayer(object):
             LOGGER.debug('Updating layer {}'.format(current_layer_id))
             req_url = self.api.host + '1/layers/{}.json'.format(
                 current_layer_id)
-            response = GISCloudNetworkHandler.blocking_request(
+            response = layer_request_with_retry(
                 GISCloudNetworkHandler.PUT,
                 req_url,
                 self.api.user.apikey,
@@ -209,7 +239,7 @@ class GISCloudLayer(object):
             self.resource_id = self.giscloud_layer["resource_id"]
             return
 
-        response = GISCloudNetworkHandler.blocking_request(
+        response = layer_request_with_retry(
             GISCloudNetworkHandler.POST,
             post_url,
             self.api.user.apikey,
